@@ -3,6 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import IntegrityError, transaction
 from rest_framework import serializers
 from .models import User
+from vendor.models import Vendor
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, trim_whitespace=False)
@@ -41,3 +42,15 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         except IntegrityError:
             # Handles rare race conditions on unique fields
             raise serializers.ValidationError({"email": "This email is already registered."})
+
+class VendorRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vendor
+        fields = ["vendor_name", "vendor_license"] 
+        extra_kwargs = {"vendor_name": {"required": True}, "vendor_license": {"required": True}}
+
+    def create(self, validated_data):
+        # DRF merges kwargs passed to .save() into validated_data
+        user = validated_data.pop("user")
+        user_profile = validated_data.pop("user_profile")
+        return Vendor.objects.create(user=user, user_profile=user_profile, **validated_data)
